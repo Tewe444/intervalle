@@ -455,7 +455,7 @@
             {
                 intervalName: "r1", hts: 0,
                 n1: { name: "C", midi: 60, step: -2, acc: null },
-                n2: { name: "C", midi: 60, step: -2, acc: null },
+                n2: { name: "C", midi: 60, step: 2, acc: null },
                 validAnswers: ["r1"]
             },
             {
@@ -575,8 +575,8 @@
             // --- Übermäßige Primen ---
            {
                 intervalName: "ü1", hts: 1,
-                n1: { name: "C", midi: 60, step: 2, acc: null },
-                n2: { name: "C#", midi: 61, step: 2, acc: "sharp" },
+                n1: { name: "C", midi: 60, step: -2, acc: null },
+                n2: { name: "C#", midi: 61, step: -2, acc: "sharp" },
                 validAnswers: ["ü1"]
             },
             {
@@ -588,7 +588,7 @@
             {
                 intervalName: "ü1", hts: 1,
                 n1: { name: "E", midi: 64, step: 0, acc: null },
-                n2: { name: "E#", midi: 65, step: ß, acc: "sharp" },
+                n2: { name: "E#", midi: 65, step: 0, acc: "sharp" },
                 validAnswers: ["ü1"]
             },
             {
@@ -822,16 +822,17 @@
             line.setAttribute("stroke-width", "2");
             svg.appendChild(line);
 
-            if (noteObj.step === 0) {
+            if (noteObj.step === 0 || noteObj.step === -2) {
                 const ledger = document.createElementNS("http://www.w3.org/2000/svg", "line");
                 ledger.setAttribute("x1", cx - 12);
-                ledger.setAttribute("y1", 93);
+                ledger.setAttribute("y1", cy);
                 ledger.setAttribute("x2", cx + 12);
-                ledger.setAttribute("y2", 93);
+                ledger.setAttribute("y2", cy);
                 ledger.setAttribute("stroke", "#888");
                 ledger.setAttribute("stroke-width", "2");
                 svg.appendChild(ledger);
             }
+
         }
 
         function toggleNotesVisibility() {
