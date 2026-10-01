@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Intervall Trainer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1a1a1a;
+            --text-color: #f3f4f6;
+        }
+
+        body.theme-default { --bg-color: #121212; --card-bg: #1a1a1a; }
+        body.theme-cyberpunk { --bg-color: #0b0510; --card-bg: #160a22; }
+        body.theme-emerald { --bg-color: #05130d; --card-bg: #0a2117; }
+        body.theme-sunset { --bg-color: #1a0808; --card-bg: #2b0d0d; }
+        body.theme-ocean { --bg-color: #04111a; --card-bg: #0a1b2a; }
+        body.theme-ruby { --bg-color: #1a0404; --card-bg: #2d0a0a; }
+        body.theme-amethyst { --bg-color: #12051a; --card-bg: #210a2d; }
+        body.theme-amber { --bg-color: #1a1205; --card-bg: #2d210a; }
+        body.theme-midnight { --bg-color: #050508; --card-bg: #0d0d14; }
+        body.theme-matrix { --bg-color: #021204; --card-bg: #05220a; }
+        body.theme-cherry { --bg-color: #1a0512; --card-bg: #2d0a1f; }
+        body.theme-arctic { --bg-color: #08151a; --card-bg: #0f262d; }
+        body.theme-coffee { --bg-color: #17110d; --card-bg: #281d16; }
+        body.theme-neon { --bg-color: #12021a; --card-bg: #220530; }
+        body.theme-slate { --bg-color: #111418; --card-bg: #1d2228; }
+        body.theme-gold { --bg-color: #1a1705; --card-bg: #2e290a; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            user-select: none;
+            transition: background-color 0.4s ease;
+        }
+
+        .app-card {
+            background-color: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+        }
+
+        .bossbar-container {
+            background-color: #1e1e1e;
+            border: 1px solid #333;
+            box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.6);
+            border-radius: 20px;
+            height: 34px;
+            position: relative;
+            display: flex;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        .bossbar-segment {
+            flex: 1;
+            transition: background-color 0.3s, box-shadow 0.3s;
+            border-right: 1px solid rgba(0,0,0,0.2);
+        }
+        
+        .bossbar-segment:last-child {
+            border-right: none;
+        }
+
+        .bossbar-segment.correct {
+            background-color: #2ecc71;
+            box-shadow: 0 0 12px #2ecc71;
+            z-index: 1;
+        }
+
+        .bossbar-text {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 13px;
+            font-weight: 800;
+            text-shadow: 1px 1px 2px black, 0 0 4px black, 0 0 6px rgba(0,0,0,0.8);
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        
+        .input-field {
+            background-color: #222;
+            border: 1px solid #444;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            text-align: center;
+        }
+        .input-field:focus {
+            border-color: #3b82f6;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        .btn-primary {
+            background: linear-gradient(180deg, #34d399, #10b981);
+            color: #000;
+            border: none;
+            box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);
+            transition: transform 0.1s, filter 0.2s;
+        }
+        .btn-primary:active {
+            transform: scale(0.96);
+        }
+
+        .floating-widget {
+            background-color: #1e1e1e;
+            border: 1px solid #333;
+            box-shadow: 0 10px 15px rgba(0,0,0,0.5);
+        }
+
+        .modal-bg {
+            background-color: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(4px);
+        }
+        
+        .piano-container {
+            width: 100%;
+            max-width: 280px;
+            height: 65px;
+            position: relative;
+            margin: 0 auto;
+            border-radius: 6px;
+            border: 2px solid #333;
+            display: flex;
+            background: #111;
+            overflow: hidden;
+        }
+        .white-key {
+            flex: 1;
+            background: #e5e7eb;
+            border-right: 1px solid #999;
+            position: relative;
+            z-index: 1;
+        }
+        .white-key:last-child {
+            border-right: none;
+        }
+        .black-key {
+            position: absolute;
+            width: 9%;
+            height: 60%;
+            background: #1a1a1a;
+            z-index: 2;
+            border-radius: 0 0 4px 4px;
+            box-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+        }
+    </style>
+</head>
+<body class="theme-default min-h-screen">
+  <main class="flex min-h-screen items-center justify-center p-4">
+
+    <audio id="bgMusicPlayer" loop class="hidden"></audio>
+
+    <main class="w-full max-w-md app-card rounded-3xl p-6 space-y-5 relative z-10 flex flex-col items-center">
+        
+        <div id="boostIndicator" class="hidden w-full bg-amber-500/20 border border-amber-500/50 text-amber-300 text-xs font-bold py-1.5 px-3 rounded-xl flex justify-between items-center">
+            <span><i class="fas fa-bolt mr-1 text-amber-400"></i> 2x Multiplikator aktiv!</span>
+            <span id="boostTimerText">05:00</span>
+        </div>
+
+        <div class="bossbar-container w-full" id="bossbarContainer">
+            <div id="bossbarText" class="bossbar-text">0 / 10 Aufgaben</div>
+        </div>
+
+        <div class="piano-container">
+            <div id="key-60" class="white-key"></div>
+            <div id="key-62" class="white-key"></div>
+            <div id="key-64" class="white-key"></div>
+            <div id="key-65" class="white-key"></div>
+            <div id="key-67" class="white-key"></div>
+            <div id="key-69" class="white-key"></div>
+            <div id="key-71" class="white-key"></div>
+            <div id="key-72" class="white-key"></div>
+
+            <div id="key-61" class="black-key" style="left: 8%;"></div>
+            <div id="key-63" class="black-key" style="left: 20.5%;"></div>
+            <div id="key-66" class="black-key" style="left: 45.5%;"></div>
+            <div id="key-68" class="black-key" style="left: 58%;"></div>
+            <div id="key-70" class="black-key" style="left: 70.5%;"></div>
+        </div>
+
+        <div id="staffContainer" class="bg-[#111] border border-[#333] rounded-2xl p-4 flex justify-center items-center h-36 shadow-inner relative w-full overflow-hidden">
+            <svg id="staffSvg" class="w-full h-full max-w-[280px]" viewBox="0 0 280 140" preserveAspectRatio="xMidYMid meet"></svg>
+            <button id="playNotesBtn" onclick="playIntervalSound()" class="hidden bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-xl flex items-center space-x-2 transition-transform active:scale-95 shadow-lg absolute">
+                <i class="fas fa-volume-high text-xl"></i>
+                <span>Töne Abspielen</span>
+            </button>
+        </div>
+
+        <div class="space-y-1 w-full">
+            <div class="flex justify-between items-center px-1">
+                <span class="text-xs text-gray-400 font-semibold"><i class="fas fa-sliders-h text-blue-400 mr-1"></i> Nebenkästen (optional):</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 w-full">
+                <input type="text" id="note1Input" placeholder="1. Note" autocomplete="off"
+                       class="input-field h-10 px-2 rounded-xl font-semibold text-xs text-white placeholder-gray-500 w-full">
+                <input type="text" id="note2Input" placeholder="2. Note" autocomplete="off"
+                       class="input-field h-10 px-2 rounded-xl font-semibold text-xs text-white placeholder-gray-500 w-full">
+                <input type="number" id="htsInput" placeholder="HTS" autocomplete="off"
+                       class="input-field h-10 px-2 rounded-xl font-semibold text-xs text-white placeholder-gray-500 w-full">
+            </div>
+        </div>
+
+        <div class="space-y-2 pt-1 flex flex-col items-center justify-center w-full">
+            <div id="feedbackMsg" class="text-center font-bold text-sm min-h-[24px] transition-all w-full px-2"></div>
+            <div id="inputWrapper" class="flex items-center space-x-2 w-full justify-center">
+                <input type="text" id="intervalInput" placeholder="Intervall (z.B. g3, Terz)..." autocomplete="off"
+                       class="input-field flex-1 h-14 px-4 rounded-xl font-bold text-base text-white transition-all placeholder-gray-500 text-center max-w-[280px]">
+                <button id="checkBtn" onclick="checkInput()" 
+                        class="btn-primary h-14 px-6 rounded-xl font-bold text-base flex-shrink-0">
+                    Prüfen
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <div class="fixed bottom-6 right-6 flex items-center space-x-3 z-40">
+        <button id="toggleNotesBtn" onclick="toggleNotesVisibility()" title="Noten ausblenden / anzeigen" class="floating-widget w-12 h-12 rounded-full flex items-center justify-center text-purple-400 hover:text-purple-300 transition-colors">
+            <i id="eyeIcon" class="fas fa-eye text-lg"></i>
+        </button>
+
+        <button onclick="openModal('infoModal')" class="floating-widget w-12 h-12 rounded-full flex items-center justify-center text-blue-400 hover:text-blue-300 transition-colors">
+            <i class="fas fa-info-circle text-lg"></i>
+        </button>
+
+        <button onclick="openModal('leaderboardModal')" class="floating-widget w-12 h-12 rounded-full flex items-center justify-center text-indigo-400 hover:text-indigo-300 transition-colors">
+            <i class="fas fa-trophy text-lg"></i>
+        </button>
+
+        <button onclick="openModal('shopModal')" class="floating-widget w-12 h-12 rounded-full flex items-center justify-center text-slate-300 hover:text-white transition-colors">
+            <i class="fas fa-shopping-cart text-lg"></i>
+        </button>
+
+        <div id="coinContainer" class="floating-widget px-4 py-2 rounded-full flex items-center space-x-2">
+            <i class="fas fa-coins text-yellow-500"></i>
+            <span id="coinDisplay" class="font-bold text-yellow-500 text-lg">0</span>
+        </div>
+    </div>
+
+    <div id="leaderboardModal" class="hidden fixed inset-0 modal-bg z-50 flex items-center justify-center p-4">
+        <div class="app-card w-full max-w-sm rounded-2xl p-6 relative">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-lg text-white"><i class="fas fa-trophy text-indigo-400 mr-2"></i> Statistik</h3>
+                <button onclick="closeModal('leaderboardModal')" class="text-gray-400 hover:text-white text-xl">&times;</button>
+            </div>
+            <div class="space-y-3">
+                <div class="bg-[#222] p-4 rounded-xl border border-[#333] flex justify-between items-center">
+                    <span class="text-gray-400 font-medium flex items-center"><i class="fas fa-fire text-orange-500 mr-2"></i> Tages-Streak</span>
+                    <span class="text-orange-500 font-bold text-xl"><span id="streakDisplay">0</span></span>
+                </div>
+                <div class="bg-[#222] p-4 rounded-xl border border-[#333] flex justify-between items-center">
+                    <span class="text-gray-400 font-medium">Absolvierte Runden</span>
+                    <span class="text-emerald-400 font-bold text-xl" id="roundsDisplay">0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="shopModal" class="hidden fixed inset-0 modal-bg z-50 flex items-center justify-center p-4">
+        <div class="app-card w-full max-w-md rounded-2xl p-6 relative max-h-[85vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-lg text-white"><i class="fas fa-store text-yellow-500 mr-2"></i> Shop</h3>
+                <button onclick="closeModal('shopModal')" class="text-gray-400 hover:text-white text-xl">&times;</button>
+            </div>
+            
+            <div class="grid grid-cols-3 gap-1 mb-4 bg-[#222] p-1 rounded-xl">
+                <button onclick="switchShopTab('themes')" id="tabThemesBtn" class="py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white transition">Farben</button>
+                <button onclick="switchShopTab('upgrades')" id="tabUpgradesBtn" class="py-1.5 rounded-lg text-xs font-bold text-gray-400 hover:text-white transition">Upgrades</button>
+                <button onclick="switchShopTab('music')" id="tabMusicBtn" class="py-1.5 rounded-lg text-xs font-bold text-gray-400 hover:text-white transition">Musik</button>
+            </div>
+
+            <div id="shopItemsContainer" class="space-y-3"></div>
+        </div>
+    </div>
+
+    <div id="infoModal" class="hidden fixed inset-0 modal-bg z-50 flex items-center justify-center p-4">
+        <div class="app-card w-full max-w-md rounded-2xl p-6 relative max-h-[85vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-lg text-white"><i class="fas fa-info-circle text-blue-400 mr-2"></i> Intervall-Übersicht</h3>
+                <button onclick="closeModal('infoModal')" class="text-gray-400 hover:text-white text-xl">&times;</button>
+            </div>
+            <p class="text-xs text-gray-400 mb-4">Klicke auf die Intervalle für die Abkürzungen</p>
+            <div id="infoIntervalList" class="space-y-1.5"></div>
+        </div>
+    </div>
+
+    <div id="cheatModal" class="hidden fixed inset-0 modal-bg z-50 flex items-center justify-center p-4">
+        <div class="app-card w-full max-w-sm rounded-2xl p-6 relative text-center space-y-4">
+            <div class="flex justify-between items-center mb-2">
+                <h3 class="font-bold text-lg text-white"><i class="fas fa-user-ninja mr-2"></i> Developer Menu</h3>
+                <button onclick="closeModal('cheatModal')" class="text-gray-400 hover:text-white text-xl">&times;</button>
+            </div>
+            <div class="space-y-3 pt-2">
+                <button onclick="addCheatCoins(1000)" class="w-full py-3 bg-gray-600/80 hover:bg-gray-500 text-white font-normal rounded-xl flex items-center justify-center space-x-2 transition-colors">
+                    <span>+1000 Coins hinzufügen</span>
+                </button>
+                <button onclick="resetAllProgress()" class="w-full py-3 bg-red-600/80 hover:bg-red-500 text-white font-normal rounded-xl flex items-center justify-center space-x-2 transition-colors">
+                    <span>Fortschritt zurücksetzen</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const CORRECT_SOUND_URL = "https://cdn.freesound.org/previews/391/391539_5235550-lq.mp3";
+
+        const MAIN_INTERVAL_INFO = [
+            {
+                name: "Prime",
+                htsLabel: "0 HTS",
+                number: 1,
+                hasKlein: false,
+                variants: [
+                    { label: "r1 Reine Prime", htsText: "+0 HTS", colorClass: "text-orange-400 bg-orange-950/60 border-orange-500/30" },
+                    { label: "ü1 Übermäßige Prime", htsText: "+1 HTS", colorClass: "text-emerald-400 bg-emerald-950/60 border-emerald-500/30" }
+                ]
+            },
+            {
+                name: "Sekunde",
+                htsLabel: "2 HTS",
+                number: 2,
+                hasKlein: true,
+                variants: [
+                    { label: "v2 Verminderte Sekunde", htsText: "-2 HTS", colorClass: "text-blue-400 bg-blue-950/60 border-blue-500/30" },
+                    { label: "k2 Kleine Sekunde", htsText: "-1 HTS", colorClass: "text-blue-400 bg-blue-950/60 border-blue-500/30" },
+                    { label: "g2 Große Sekunde", htsText: "+0 HTS", colorClass: "text-orange-400 bg-orange-950/60 border-orange-500/30" },
+                    { label: "ü2 Übermäßige Sekunde", htsText: "+1 HTS", colorClass: "text-emerald-400 bg-emerald-950/60 border-emerald-500/30" }
+                ]
+            },
+            {
+                name: "Terz",
+                htsLabel: "4 HTS",
+                number: 3,
+                hasKlein: true,
+                variants: [
+                    { label: "v3 Verminderte Terz", htsText: "-2 HTS", colorClass: "text-blue-400 bg-blue-950/60 border-blue-500/30" },
+                    { label: "k3 Kleine Terz", htsText: "-1 HTS", colorClass: "text-blue-400 bg-blue-950/60 border-blue-500/30" },
+                    { label: "g3 Große Terz", htsText: "+0 HTS", colorClass: "text-orange-400 bg-orange-950/60 border-orange-500/30" },
+                    { label: "ü3 Übermäßige Terz", htsText: "+1 HTS", colorClass: "text-emerald-400 bg-emerald-950/60 border-emerald-500/30" }
+                ]
+            },
+            {
+                name: "Quarte",
+                htsLabel: "5 HTS",
+                number: 4,
+                hasKlein: false,
+                variants: [
+                    { label: "v4 Verminderte Quarte", htsText: "-1 HTS", colorClass: "text-blue-400 bg-blue-950/60 border-blue-500/30" },
+                    { label: "r4 Reine Quarte", htsText: "+0 HTS", colorClass: "text-orange-400 bg-orange-950/60 border-orange-500/30" },
+                    { label: "ü4 Übermäßige Quarte", htsText: "+1 HTS", colorClass: "text-emerald-400 bg-emerald-950/60 border-emerald-500/30" }
+                ]
+            },
+            {
+                name: "Quinte",
+                htsLabel: "7 HTS",
+                number: 5,
+                hasKlein: false,
+                variants: [
+                    { label: "v5 Verminderte Quinte", htsText: "-1 HTS", colorClass: "text-blue-400 bg-blue-950/60 border-blue-500/30" },
+                    { label: "r5 Reine Quinte", htsText: "+0 HTS", colorClass: "text-orange-400 bg-orange-950/60 border-orange-500/30" },
+                    { label: "ü5 Übermäßige Quinte", htsText: "+1 HTS", colorClass: "text-emerald-400 bg-emerald-950/60 border-emerald-500/30" }
+                ]
+            },
+            {
+                name: "Sexte",
+                htsLabel: "9 HTS",
+                number: 6,
+                hasKlein: true,
+                variants: [
+                    { label: "v6 Verminderte Sexte", htsText: "-2 HTS", colorClass: "text-blue-400 bg-blue-950/60 border-blue-500/30" },
+                    { label: "k6 Kleine Sexte", htsText: "-1 HTS", colorClass: "text-blue-400 bg-blue-950/60 border-blue-500/30" },
+                    { label: "g6 Große Sexte", htsText: "+0 HTS", colorClass: "text-orange-400 bg-orange-950/60 border-orange-500/30" },
+                    { label: "ü6 Übermäßige Sexte", htsText: "+1 HTS", colorClass: "text-emerald-400 bg-emerald-950/60 border-emerald-500/30" }
+                ]
+            },
+            {
+                name: "Septime",
+                htsLabel: "11 HTS",
+                number: 7,
+                hasKlein: true,
+                variants: [
+                    { label: "v7 Verminderte Septime", htsText: "-2 HTS", colorClass: "text-blue-400 bg-blue-950/60 border-blue-500/30" },
+                    { label: "k7 Kleine Septime", htsText: "-1 HTS", colorClass: "text-blue-400 bg-blue-950/60 border-blue-500/30" },
+                    { label: "g7 Große Septime", htsText: "+0 HTS", colorClass: "text-orange-400 bg-orange-950/60 border-orange-500/30" },
+                    { label: "ü7 Übermäßige Septime", htsText: "+1 HTS", colorClass: "text-emerald-400 bg-emerald-950/60 border-emerald-500/30" }
+                ]
+            },
+            {
+                name: "Oktave",
+                htsLabel: "12 HTS",
+                number: 8,
+                hasKlein: false,
+                variants: [
+                    { label: "v8 Verminderte Oktave", htsText: "-1 HTS", colorClass: "text-blue-400 bg-blue-950/60 border-blue-500/30" },
+                    { label: "r8 Reine Oktave", htsText: "+0 HTS", colorClass: "text-orange-400 bg-orange-950/60 border-orange-500/30" },
+                    { label: "ü8 Übermäßige Oktave", htsText: "+1 HTS", colorClass: "text-emerald-400 bg-emerald-950/60 border-emerald-500/30" }
+                ]
+            }
+        ];
+
+        const THEMES = [
+            { id: 'default', name: 'Standard Dunkel', price: 0 },
+            { id: 'cyberpunk', name: 'Cyberpunk Neon', price: 5 },
+            { id: 'emerald', name: 'Emerald Forest', price: 5 },
+            { id: 'sunset', name: 'Sunset Glow', price: 8 },
+            { id: 'ocean', name: 'Deep Ocean', price: 8 },
+            { id: 'ruby', name: 'Ruby Red', price: 10 },
+            { id: 'amethyst', name: 'Amethyst', price: 10 },
+            { id: 'amber', name: 'Amber Gold', price: 12 },
+            { id: 'midnight', name: 'Midnight Blue', price: 12 },
+            { id: 'matrix', name: 'Matrix Green', price: 15 },
+            { id: 'cherry', name: 'Cherry Blossom', price: 15 },
+            { id: 'arctic', name: 'Arctic Frost', price: 18 },
+            { id: 'coffee', name: 'Warm Coffee', price: 18 },
+            { id: 'neon', name: 'Vibrant Neon', price: 20 },
+            { id: 'slate', name: 'Slate Modern', price: 25 },
+            { id: 'gold', name: 'Royal Gold', price: 30 }
+        ];
+
+        const UPGRADES = [
+            { id: 'boost_2x', name: '2x Multiplikator (5 Min)', price: 50, desc: 'Verdoppelt den Bossbar-Fortschritt für 5 Minuten!' },
+            { id: 'auto_solver', name: 'Glücks-Autolöser (10%)', price: 100, desc: 'Jede neue Aufgabe hat eine 10%ige Chance, sich automatisch zu lösen!' }
+        ];
+
+        const MUSIC_TRACKS = [
+            { id: 'chill', name: 'Chill', price: 10, url: 'https://cdn.pixabay.com/audio/2024/06/04/audio_49ec61a598.mp3' },
+            { id: 'undertale', name: 'Undertale', price: 20, url: 'https://jetta.vgmtreasurechest.com/soundtracks/undertale-last-breath-byzerjox-soundtrack-2020/lqwlolpo/Veni%20Vici%20Conplevit.mp3' }, 
+            { id: 'minecraft', name: 'Minecraft', price: 30, url: 'https://lambda.vgmtreasurechest.com/soundtracks/minecraft/rwfnydvv/1-21.%20Danny.mp3' }, 
+            { id: 'geometry-dash', name: 'Geometry-Dash', price: 40, url: 'https://vgmtreasurechest.com/soundtracks/geometry-dash/ygozdwxw/1-07.%20Can%27t%20Let%20Go.mp3' }, 
+            { id: 'hollow-knight', name: 'Hollow-Knight', price: 50, url: 'https://vgmtreasurechest.com/soundtracks/hollow-knight-original-soundtrack/wlqvfrpa/11.%20Crystal%20Peak.mp3' }
+        ];
+
+        // ==========================================
+        // HIER KANNST DU UNENDLICH VIELE AUFGABEN HINZUFÜGEN!
+        // ==========================================
+        const INTERVAL_TASK_POOL = [
+            // --- Prim C ---
+            {
+                intervalName: "r1", hts: 0,
+                n1: { name: "C", midi: 60, step: 0, acc: null },
+                n2: { name: "C", midi: 60, step: 0, acc: null },
+                validAnswers: ["r1"]
+            },
+            {
+                intervalName: "r1", hts: 0,
+                n1: { name: "C#", midi: 61, step: 0, acc: "sharp" },
+                n2: { name: "C#", midi: 61, step: 0, acc: "sharp" },
+                validAnswers: ["r1"]
+            },
+
+            // -- Prim D --
+
+            {
+                intervalName: "r1", hts: 0,
+                n1: { name: "Db", midi: 61, step: 1, acc: "flat" },
+                n2: { name: "Db", midi: 61, step: 1, acc: "flat" },
+                validAnswers: ["r1"]
+            },
+            {
+                intervalName: "r1", hts: 0,
+                n1: { name: "D", midi: 62, step: 1, acc: null },
+                n2: { name: "D", midi: 62, step: 1, acc: null },
+                validAnswers: ["r1"]
+            },
+            {
+                intervalName: "r1", hts: 0,
+                n1: { name: "D#", midi: 63, step: 1, acc: "sharp" },
+                n2: { name: "D#", midi: 63, step: 1, acc: "sharp" },
+                validAnswers: ["r1"]
+            },
+
+            // -- Prim E --
+
+            {
+                intervalName: "r1", hts: 0,
+                n1: { name: "Eb", midi: 63, step: 2, acc: "flat" },
+                n2: { name: "Eb", midi: 63, step: 2, acc: "flat" },
+                validAnswers: ["r1"]
+            },
+            {
+                intervalName: "r1", hts: 0,
+                n1: { name: "E", midi: 64, step: 2, acc: null },
+                n2: { name: "E", midi: 64, step: 2, acc: null },
+                validAnswers: ["r1"]
+            },
+
+            // -- Prim F --
+
+            {
+                intervalName: "r1", hts: 0,
+                n1: { name: "F", midi: 65, step: 3, acc: null },
+                n2: { name: "F", midi: 65, step: 3, acc: null },
+                validAnswers: ["r1"]
+            },
+            {
+                intervalName: "r1", hts: 0,
+                n1: { name: "F#", midi: 66, step: 3, acc: "sharp" },
+                n2: { name: "F#", midi: 66, step: 3, acc: "sharp" },
+                validAnswers: ["r1"]
+            },
+
+            // -- Prim G --
+
+            {
+                intervalName: "r1", hts: 0,
+                n1: { name: "Gb", midi: 66, step: 4, acc: "sharp" },
+                n2: { name: "Gb", midi: 66, step: 4, acc: "sharp" },
+                validAnswers: ["r1"]
+            },
+            {
+                intervalName: "r1", hts: 0,
+                n1: { name: "G", midi: 67, step: 4, acc: null },
+                n2: { name: "G", midi: 67, step: 4, acc: null },
+                validAnswers: ["r1"]
+            },
+            {
+                intervalName: "r1", hts: 0,
+                n1: { name: "G#", midi: 68, step: 4, acc: "flat" },
+                n2: { name: "G#", midi: 68, step: 4, acc: "flat" },
+                validAnswers: ["r1"]
+            },
+
+            // -- Prim A --
+
+            {
+                intervalName: "r1", hts: 0,
+                n1: { name: "Ab", midi: 68, step: 5, acc: "flat" },
+                n2: { name: "Ab", midi: 68, step: 5, acc: "flat" },
+                validAnswers: ["r1"]
+            },
+            {
+                intervalName: "r1", hts: 0,
+                n1: { name: "A", midi: 69, step: 5, acc: null },
+                n2: { name: "A", midi: 69, step: 5, acc: null },
+                validAnswers: ["r1"]
+            },
+            {
+                intervalName: "r1", hts: 0,
+                n1: { name: "A#", midi: 70, step: 5, acc: "sharp" },
+                n2: { name: "A#", midi: 70, step: 5, acc: "sharp" },
+                validAnswers: ["r1"]
+            },
+
+            // -- Prim H --
+
+            {
+                intervalName: "r1", hts: 0,
+                n1: { name: "Hb", midi: 70, step: 6, acc: "flat" },
+                n2: { name: "Hb", midi: 70, step: 6, acc: "flat" },
+                validAnswers: ["r1"]
+            },
+            {
+                intervalName: "r1", hts: 0,
+                n1: { name: "H", midi: 71, step: 6, acc: null },
+                n2: { name: "H", midi: 71, step: 6, acc: null },
+                validAnswers: ["r1"]
+            },
+            // --- Übermäßige Primen ---
+           {
+                intervalName: "ü1", hts: 1,
+                n1: { name: "C", midi: 60, step: 0, acc: null },
+                n2: { name: "C#", midi: 61, step: 0, acc: "sharp" },
+                validAnswers: ["ü1"]
+            },
+            {
+                intervalName: "ü1", hts: 1,
+                n1: { name: "D", midi: 62, step: 1, acc: null },
+                n2: { name: "D#", midi: 63, step: 1, acc: "sharp" },
+                validAnswers: ["ü1"]
+            },
+            {
+                intervalName: "ü1", hts: 1,
+                n1: { name: "E", midi: 64, step: 2, acc: null },
+                n2: { name: "E#", midi: 65, step: 2, acc: "sharp" },
+                validAnswers: ["ü1"]
+            },
+            {
+                intervalName: "ü1", hts: 1,
+                n1: { name: "F", midi: 65, step: 3, acc: null },
+                n2: { name: "F#", midi: 66, step: 3, acc: "sharp" },
+                validAnswers: ["ü1"]
+            },
+            {
+                intervalName: "ü1", hts: 1,
+                n1: { name: "G", midi: 67, step: 4, acc: null },
+                n2: { name: "G#", midi: 68, step: 4, acc: "sharp" },
+                validAnswers: ["ü1"]
+            },
+            {
+                intervalName: "ü1", hts: 1,
+                n1: { name: "A", midi: 69, step: 5, acc: null },
+                n2: { name: "A#", midi: 70, step: 5, acc: "sharp" },
+                validAnswers: ["ü1"]
+            },
+            {
+                intervalName: "ü1", hts: 1,
+                n1: { name: "H", midi: 71, step: 6, acc: null },
+                n2: { name: "H#", midi: 72, step: 6, acc: "sharp" },
+                validAnswers: ["ü1"]
+            },
+            {
+                intervalName: "r5", hts: 7,
+                n1: { name: "D", midi: 62, step: 1, acc: null },
+                n2: { name: "A", midi: 69, step: 5, acc: null },
+                validAnswers: ["r5"]
+            },
+            {
+                intervalName: "k2", hts: 1,
+                n1: { name: "D", midi: 62, step: 1, acc: null },
+                n2: { name: "Eb", midi: 63, step: 2, acc: "flat" },
+                validAnswers: ["k2"]
+            },
+            {
+                intervalName: "g2", hts: 2,
+                n1: { name: "Ab", midi: 68, step: 5, acc: "flat" },
+                n2: { name: "Hb", midi: 70, step: 6, acc: "flat" },
+                validAnswers: ["g2"]
+            },
+            {
+                intervalName: "k3", hts: 3,
+                n1: { name: "F#", midi: 66, step: 3, acc: "sharp" },
+                n2: { name: "Ab", midi: 68, step: 5, acc: "flat" },
+                validAnswers: ["k3"]
+            },
+        ];
+        // ==========================================
+
+        let state = {
+            coins: parseInt(localStorage.getItem('coins')) || 0,
+            streak: parseInt(localStorage.getItem('streak')) || 0,
+            lastStreakDate: localStorage.getItem('lastStreakDate') || '',
+            totalRounds: parseInt(localStorage.getItem('totalRounds')) || 0,
+            unlockedThemes: JSON.parse(localStorage.getItem('unlockedThemes')) || ['default'],
+            activeTheme: localStorage.getItem('activeTheme') || 'default',
+            unlockedUpgrades: JSON.parse(localStorage.getItem('unlockedUpgrades')) || [],
+            unlockedMusic: JSON.parse(localStorage.getItem('unlockedMusic')) || [],
+            activeMusic: localStorage.getItem('activeMusic') || '',
+            boostUntil: parseInt(localStorage.getItem('boostUntil')) || 0,
+            notesHidden: false,
+            
+            bossProgress: 0,
+            isWaiting: false,
+            currentTask: null,
+            shopTab: 'themes',
+            expandedIntervalIndex: null
+        };
+
+        let boostInterval = null;
+
+        window.onload = function () {
+            applyTheme(state.activeTheme);
+            checkDailyStreak();
+            initBossbar();
+            generateTask();
+            renderInfoModal();
+            updateUI();
+            
+            if (state.activeMusic) {
+                const track = MUSIC_TRACKS.find(t => t.id === state.activeMusic);
+                if (track) playMusicTrack(track.id, false);
+            }
+
+            if (state.boostUntil > Date.now()) {
+                startBoostTimerUI();
+            }
+
+            document.getElementById('intervalInput').addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    checkInput();
+                }
+            });
+        };
+
+        function saveState() {
+            localStorage.setItem('coins', state.coins);
+            localStorage.setItem('streak', state.streak);
+            localStorage.setItem('lastStreakDate', state.lastStreakDate);
+            localStorage.setItem('totalRounds', state.totalRounds);
+            localStorage.setItem('unlockedThemes', JSON.stringify(state.unlockedThemes));
+            localStorage.setItem('activeTheme', state.activeTheme);
+            localStorage.setItem('unlockedUpgrades', JSON.stringify(state.unlockedUpgrades));
+            localStorage.setItem('unlockedMusic', JSON.stringify(state.unlockedMusic));
+            localStorage.setItem('activeMusic', state.activeMusic);
+            localStorage.setItem('boostUntil', state.boostUntil);
+        }
+
+        function checkDailyStreak() {
+            const today = new Date().toDateString();
+            if (state.lastStreakDate !== today) {
+                const yesterday = new Date(Date.now() - 86400000).toDateString();
+                if (state.lastStreakDate === yesterday) {
+                    state.streak++;
+                } else if (state.lastStreakDate !== '') {
+                    state.streak = 1;
+                } else {
+                    state.streak = 1;
+                }
+                state.lastStreakDate = today;
+                saveState();
+            }
+        }
+
+        function initBossbar() {
+            renderBossbar();
+        }
+
+        function renderBossbar() {
+            const container = document.getElementById("bossbarContainer");
+            container.innerHTML = `
+                <div id="bossbarText" class="bossbar-text">${state.bossProgress} / 10 Aufgaben</div>
+            `;
+            for (let i = 0; i < 10; i++) {
+                const seg = document.createElement('div');
+                seg.className = `bossbar-segment ${i < state.bossProgress ? 'correct' : ''}`;
+                container.appendChild(seg);
+            }
+        }
+
+        function generateTask() {
+            if (state.isWaiting) return;
+            
+            if (state.unlockedUpgrades.includes('auto_solver') && Math.random() < 0.10) {
+                state.currentTask = INTERVAL_TASK_POOL.find(t => t.hts === 7) || INTERVAL_TASK_POOL[0];
+                renderStaff();
+                document.getElementById('feedbackMsg').className = "text-center font-bold text-amber-400 text-sm min-h-[24px] w-full";
+                document.getElementById('feedbackMsg').innerText = "Glücks-Autolöser! aktiviert";
+                setTimeout(() => handleCorrectAnswer(), 800);
+                return;
+            }
+
+            const randIdx = Math.floor(Math.random() * INTERVAL_TASK_POOL.length);
+            state.currentTask = INTERVAL_TASK_POOL[randIdx];
+
+            document.getElementById('intervalInput').value = "";
+            document.getElementById('note1Input').value = "";
+            document.getElementById('note2Input').value = "";
+            document.getElementById('htsInput').value = "";
+            document.getElementById('feedbackMsg').innerText = "";
+
+            renderStaff();
+        }
+
+        function renderStaff() {
+            const svg = document.getElementById("staffSvg");
+            svg.innerHTML = "";
+
+            for (let i = 0; i < 5; i++) {
+                const y = 45 + i * 12;
+                const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                line.setAttribute("x1", "30");
+                line.setAttribute("y1", y);
+                line.setAttribute("x2", "250");
+                line.setAttribute("y2", y);
+                line.setAttribute("stroke", "#555");
+                line.setAttribute("stroke-width", "2");
+                svg.appendChild(line);
+            }
+
+            if (!state.notesHidden && state.currentTask) {
+                drawNoteOnStaff(svg, 100, state.currentTask.n1);
+                drawNoteOnStaff(svg, 180, state.currentTask.n2);
+                document.getElementById('playNotesBtn').classList.add('hidden');
+            } else {
+                document.getElementById('playNotesBtn').classList.remove('hidden');
+            }
+        }
+
+        function drawNoteOnStaff(svg, cx, noteObj) {
+            const cy = 93 - (noteObj.step * 6);
+
+            if (noteObj.acc === 'sharp') {
+                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                text.setAttribute("x", cx - 18);
+                text.setAttribute("y", cy + 5);
+                text.setAttribute("fill", "#f3f4f6");
+                text.setAttribute("font-size", "18");
+                text.setAttribute("font-weight", "bold");
+                text.textContent = "♯";
+                svg.appendChild(text);
+            } else if (noteObj.acc === 'flat') {
+                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                text.setAttribute("x", cx - 18);
+                text.setAttribute("y", cy + 4);
+                text.setAttribute("fill", "#f3f4f6");
+                text.setAttribute("font-size", "18");
+                text.setAttribute("font-weight", "bold");
+                text.textContent = "♭";
+                svg.appendChild(text);
+            }
+
+            const ellipse = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
+            ellipse.setAttribute("cx", cx);
+            ellipse.setAttribute("cy", cy);
+            ellipse.setAttribute("rx", "6");
+            ellipse.setAttribute("ry", "4.5");
+            ellipse.setAttribute("fill", "#f3f4f6");
+            svg.appendChild(ellipse);
+
+            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            line.setAttribute("x1", cx + 5);
+            line.setAttribute("y1", cy);
+            line.setAttribute("x2", cx + 5);
+            line.setAttribute("y2", cy - 25);
+            line.setAttribute("stroke", "#f3f4f6");
+            line.setAttribute("stroke-width", "2");
+            svg.appendChild(line);
+
+            if (noteObj.step === 0) {
+                const ledger = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                ledger.setAttribute("x1", cx - 12);
+                ledger.setAttribute("y1", 93);
+                ledger.setAttribute("x2", cx + 12);
+                ledger.setAttribute("y2", 93);
+                ledger.setAttribute("stroke", "#888");
+                ledger.setAttribute("stroke-width", "2");
+                svg.appendChild(ledger);
+            }
+        }
+
+        function toggleNotesVisibility() {
+            state.notesHidden = !state.notesHidden;
+            const eyeIcon = document.getElementById('eyeIcon');
+            eyeIcon.className = state.notesHidden ? 'fas fa-eye-slash text-lg text-purple-400' : 'fas fa-eye text-lg text-purple-400';
+            renderStaff();
+        }
+
+        function playIntervalSound() {
+            if (state.currentTask) {
+                const volume = state.notesHidden ? 0.5 : 0.15;
+                playTone(midiToFreq(state.currentTask.n1.midi), 'sine', 0.4, volume);
+                setTimeout(() => {
+                    playTone(midiToFreq(state.currentTask.n2.midi), 'sine', 0.4, volume);
+                }, 400);
+            }
+        }
+
+        function playSoundFromUrl(url) {
+            if (!url) return;
+            try {
+                const audio = new Audio(url);
+                audio.volume = 0.6;
+                audio.play().catch(e => console.log("Audio URL Play error:", e));
+            } catch (e) {
+                console.error("Audio play failed:", e);
+            }
+        }
+
+        function midiToFreq(midi) {
+            return 440 * Math.pow(2, (midi - 69) / 12);
+        }
+
+        function playTone(freq, type, duration, volume = 0.15) {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = type;
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(volume, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + duration);
+            } catch (e) {
+                console.error("Audio error:", e);
+            }
+        }
+
+        function matchNoteString(userInput, noteObj) {
+            if (!userInput) return true;
+            const cleanInput = userInput.trim().toLowerCase().replace(/♯/g, '#').replace(/♭/g, 'b');
+            const cleanTargetName = noteObj.name.toLowerCase().replace(/♯/g, '#').replace(/♭/g, 'b');
+            
+            if (cleanInput === cleanTargetName) return true;
+
+            const noteAliases = {
+                60: ["c", "c4"],
+                61: ["c#", "cis", "db", "des"],
+                62: ["d", "d4"],
+                63: ["d#", "dis", "eb", "es"],
+                64: ["e", "e4"],
+                65: ["f", "f4"],
+                66: ["f#", "fis", "gb", "ges"],
+                67: ["g", "g4"],
+                68: ["g#", "gis", "ab", "as"],
+                69: ["a", "a4"],
+                70: ["a#", "ais", "bb", "b"],
+                71: ["h", "b", "h4"],
+                72: ["c", "c5"]
+            };
+
+            const validList = noteAliases[noteObj.midi] || [];
+            return validList.includes(cleanInput);
+        }
+
+        function checkInput() {
+            if (state.isWaiting || !state.currentTask) return;
+
+            const rawInput = document.getElementById('intervalInput').value.trim();
+            const feedbackEl = document.getElementById('feedbackMsg');
+
+            if (rawInput === "524262") {
+                openModal('cheatModal');
+                document.getElementById('intervalInput').value = "";
+                return;
+            }
+
+            const userN1 = document.getElementById('note1Input').value.trim();
+            const userN2 = document.getElementById('note2Input').value.trim();
+            const userHts = document.getElementById('htsInput').value.trim();
+
+            if (rawInput === "" && userN1 === "" && userN2 === "" && userHts === "") {
+                feedbackEl.className = "text-center font-bold text-red-500 text-sm min-h-[24px] w-full";
+                feedbackEl.innerText = "Bitte gib eine Antwort ein! ✗";
+                playTone(150, 'sawtooth', 0.3);
+                return;
+            }
+
+            let isCorrect = true;
+
+            if (rawInput !== "") {
+                const cleanInput = rawInput.toLowerCase().replace(/[\.\-\s]/g, '');
+                const validListNormalized = state.currentTask.validAnswers.map(a => a.toLowerCase().replace(/[\.\-\s]/g, ''));
+                
+                if (!validListNormalized.includes(cleanInput)) {
+                    isCorrect = false;
+                }
+            }
+
+            if (userN1 && !matchNoteString(userN1, state.currentTask.n1)) isCorrect = false;
+            if (userN2 && !matchNoteString(userN2, state.currentTask.n2)) isCorrect = false;
+            if (userHts) {
+                const parsedHts = parseInt(userHts.replace(/\D/g, ''));
+                if (isNaN(parsedHts) || parsedHts !== state.currentTask.hts) isCorrect = false;
+            }
+
+            if (isCorrect) {
+                handleCorrectAnswer();
+            } else {
+                feedbackEl.className = "text-center font-bold text-red-500 text-sm min-h-[24px] w-full";
+                feedbackEl.innerText = `Falsch! ✗ (Richtig: ${state.currentTask.intervalName})`;
+                playTone(150, 'sawtooth', 0.3);
+
+                state.isWaiting = true;
+                setTimeout(() => {
+                    state.isWaiting = false;
+                    generateTask();
+                }, 2200);
+            }
+        }
+
+        function handleCorrectAnswer() {
+            const feedbackEl = document.getElementById('feedbackMsg');
+            const isBoosted = Date.now() < state.boostUntil;
+            const stepsToAdd = isBoosted ? 2 : 1;
+
+            for (let s = 0; s < stepsToAdd; s++) {
+                if (state.bossProgress < 10) {
+                    state.bossProgress++;
+                }
+            }
+
+            renderBossbar();
+            feedbackEl.className = "text-center font-bold text-emerald-400 text-sm min-h-[24px] w-full";
+            feedbackEl.innerText = isBoosted ? "Richtig! (+2 Multiplikator) ✓" : "Richtig! ✓";
+            
+            playSoundFromUrl(CORRECT_SOUND_URL);
+
+            if (state.bossProgress >= 10) {
+                state.coins += 10;
+                state.totalRounds++;
+                saveState();
+                updateUI();
+                playTone(800, 'triangle', 0.4);
+
+                feedbackEl.innerText = "Geschaft +10 Coins";
+                state.isWaiting = true;
+                setTimeout(() => {
+                    state.bossProgress = 0;
+                    renderBossbar();
+                    state.isWaiting = false;
+                    generateTask();
+                }, 2000);
+            } else {
+                state.isWaiting = true;
+                setTimeout(() => {
+                    state.isWaiting = false;
+                    generateTask();
+                }, 1200);
+            }
+        }
+
+        function openModal(id) {
+            document.getElementById(id).classList.remove('hidden');
+            if (id === 'leaderboardModal') {
+                document.getElementById('streakDisplay').innerText = state.streak;
+                document.getElementById('roundsDisplay').innerText = state.totalRounds;
+            } else if (id === 'shopModal') {
+                renderShop();
+            } else if (id === 'infoModal') {
+                renderInfoModal();
+            }
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        function switchShopTab(tab) {
+            state.shopTab = tab;
+            document.getElementById('tabThemesBtn').className = tab === 'themes' ? 'py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white transition' : 'py-1.5 rounded-lg text-xs font-bold text-gray-400 hover:text-white transition';
+            document.getElementById('tabUpgradesBtn').className = tab === 'upgrades' ? 'py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white transition' : 'py-1.5 rounded-lg text-xs font-bold text-gray-400 hover:text-white transition';
+            document.getElementById('tabMusicBtn').className = tab === 'music' ? 'py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white transition' : 'py-1.5 rounded-lg text-xs font-bold text-gray-400 hover:text-white transition';
+            renderShop();
+        }
+
+        function renderShop() {
+            const container = document.getElementById("shopItemsContainer");
+            container.innerHTML = "";
+
+            if (state.shopTab === 'themes') {
+                THEMES.forEach(theme => {
+                    const isUnlocked = state.unlockedThemes.includes(theme.id);
+                    const isActive = state.activeTheme === theme.id;
+
+                    let btnHtml = "";
+                    if (isActive) {
+                        btnHtml = `<span class="text-xs font-bold text-emerald-400 bg-emerald-950/50 px-3 py-1.5 rounded-lg border border-emerald-500/30">Aktiv</span>`;
+                    } else if (isUnlocked) {
+                        btnHtml = `<button onclick="selectTheme('${theme.id}')" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition">Auswählen</button>`;
+                    } else {
+                        const canAfford = state.coins >= theme.price;
+                        btnHtml = `<button onclick="buyTheme('${theme.id}', ${theme.price})" class="px-3 py-1.5 ${canAfford ? 'bg-yellow-600 hover:bg-yellow-500 text-black' : 'bg-gray-700 text-gray-500 cursor-not-allowed'} rounded-lg text-xs font-bold transition">
+                            ${theme.price} <i class="fas fa-coins text-[10px]"></i>
+                        </button>`;
+                    }
+
+                    container.innerHTML += `
+                        <div class="bg-[#222] border border-[#333] p-3 rounded-xl flex items-center justify-between">
+                            <span class="font-semibold text-gray-200 text-sm">${theme.name}</span>
+                            ${btnHtml}
+                        </div>
+                    `;
+                });
+            } else if (state.shopTab === 'upgrades') {
+                UPGRADES.forEach(upg => {
+                    const isUnlocked = state.unlockedUpgrades.includes(upg.id);
+                    let btnHtml = "";
+
+                    if (isUnlocked && upg.id === 'boost_2x') {
+                        btnHtml = `<button onclick="buyUpgrade('${upg.id}', ${upg.price})" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-black rounded-lg text-xs font-bold transition">Erneuern (${upg.price} <i class="fas fa-coins text-[10px]"></i>)</button>`;
+                    } else if (isUnlocked) {
+                        btnHtml = `<span class="text-xs font-bold text-emerald-400 bg-emerald-950/50 px-3 py-1.5 rounded-lg border border-emerald-500/30">Besessen</span>`;
+                    } else {
+                        const canAfford = state.coins >= upg.price;
+                        btnHtml = `<button onclick="buyUpgrade('${upg.id}', ${upg.price})" class="px-3 py-1.5 ${canAfford ? 'bg-yellow-600 hover:bg-yellow-500 text-black' : 'bg-gray-700 text-gray-500 cursor-not-allowed'} rounded-lg text-xs font-bold transition">
+                            ${upg.price} <i class="fas fa-coins text-[10px]"></i>
+                        </button>`;
+                    }
+
+                    container.innerHTML += `
+                        <div class="bg-[#222] border border-[#333] p-3 rounded-xl flex flex-col space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="font-bold text-gray-100 text-sm"><i class="fas fa-bolt text-amber-400 mr-1.5"></i>${upg.name}</span>
+                                ${btnHtml}
+                            </div>
+                            <p class="text-xs text-gray-400">${upg.desc}</p>
+                        </div>
+                    `;
+                });
+            } else if (state.shopTab === 'music') {
+                MUSIC_TRACKS.forEach(track => {
+                    const isUnlocked = state.unlockedMusic.includes(track.id);
+                    const isActive = state.activeMusic === track.id;
+
+                    let btnHtml = "";
+                    if (isActive) {
+                        btnHtml = `<button onclick="stopMusic()" class="px-3 py-1.5 bg-red-900/50 text-red-400 border border-red-500 rounded-lg text-xs font-bold">Stoppen</button>`;
+                    } else if (isUnlocked) {
+                        btnHtml = `<button onclick="playMusicTrack('${track.id}', true)" class="px-3 py-1.5 bg-[#333] hover:bg-[#444] text-white rounded-lg text-xs font-bold transition">Abspielen</button>`;
+                    } else {
+                        const canAfford = state.coins >= track.price;
+                        btnHtml = `<button onclick="buyMusic('${track.id}', ${track.price})" class="px-3 py-1.5 ${canAfford ? 'bg-yellow-600 hover:bg-yellow-500 text-black' : 'bg-gray-700 text-gray-500 cursor-not-allowed'} rounded-lg text-xs font-bold transition">
+                            ${track.price} <i class="fas fa-coins text-[10px]"></i>
+                        </button>`;
+                    }
+
+                    container.innerHTML += `
+                        <div class="bg-[#222] border border-[#333] p-3 rounded-xl flex items-center justify-between">
+                            <div class="flex items-center space-x-2.5">
+                                <i class="fas fa-music text-blue-400"></i>
+                                <span class="font-semibold text-gray-200 text-sm">${track.name}</span>
+                            </div>
+                            ${btnHtml}
+                        </div>
+                    `;
+                });
+            }
+        }
+
+        function buyTheme(themeId, price) {
+            if (state.coins >= price) {
+                state.coins -= price;
+                state.unlockedThemes.push(themeId);
+                state.activeTheme = themeId;
+                applyTheme(themeId);
+                saveState();
+                updateUI();
+                renderShop();
+            }
+        }
+
+        function selectTheme(themeId) {
+            state.activeTheme = themeId;
+            applyTheme(themeId);
+            saveState();
+            renderShop();
+        }
+
+        function applyTheme(themeId) {
+            document.body.className = themeId === 'default' ? '' : `theme-${themeId}`;
+        }
+
+        function updateUI() {
+            const coinEl = document.getElementById('coinDisplay');
+            if (coinEl) coinEl.innerText = state.coins;
+            const streakEl = document.getElementById('streakDisplay');
+            if (streakEl) streakEl.innerText = state.streak;
+            const roundsEl = document.getElementById('roundsDisplay');
+            if (roundsEl) roundsEl.innerText = state.totalRounds;
+        }
+
+        function addCheatCoins(amount) {
+            state.coins += amount;
+            saveState();
+            updateUI();
+        }
+
+        function resetAllProgress() {
+            state.coins = 0;
+            state.streak = 0;
+            state.totalRounds = 0;
+            state.unlockedThemes = ['default'];
+            state.activeTheme = 'default';
+            state.unlockedUpgrades = [];
+            state.unlockedMusic = [];
+            state.activeMusic = '';
+            state.boostUntil = 0;
+            saveState();
+            applyTheme('default');
+            updateUI();
+            closeModal('cheatModal');
+            location.reload();
+        }
+
+        function stopMusic() {
+            const player = document.getElementById('bgMusicPlayer');
+            if (player) {
+                player.pause();
+                player.currentTime = 0;
+            }
+            state.activeMusic = '';
+            saveState();
+            renderShop();
+        }
+
+        function buyUpgrade(upgId, price) {
+            if (state.coins >= price) {
+                state.coins -= price;
+                if (!state.unlockedUpgrades.includes(upgId)) {
+                    state.unlockedUpgrades.push(upgId);
+                }
+
+                if (upgId === 'boost_2x') {
+                    state.boostUntil = Date.now() + 5 * 60 * 1000;
+                    startBoostTimerUI();
+                }
+
+                saveState();
+                updateUI();
+                renderShop();
+            }
+        }
+
+        function startBoostTimerUI() {
+            document.getElementById('boostIndicator').classList.remove('hidden');
+            if (boostInterval) clearInterval(boostInterval);
+
+            boostInterval = setInterval(() => {
+                const left = state.boostUntil - Date.now();
+                if (left <= 0) {
+                    clearInterval(boostInterval);
+                    document.getElementById('boostIndicator').classList.add('hidden');
+                    state.boostUntil = 0;
+                    saveState();
+                } else {
+                    const mins = Math.floor(left / 60000);
+                    const secs = Math.floor((left % 60000) / 1000);
+                    document.getElementById('boostTimerText').innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                }
+            }, 1000);
+        }
+
+        function buyMusic(trackId, price) {
+            if (state.coins >= price) {
+                state.coins -= price;
+                state.unlockedMusic.push(trackId);
+                playMusicTrack(trackId, true);
+                saveState();
+                updateUI();
+                renderShop();
+            }
+        }
+
+        function playMusicTrack(trackId, save) {
+            const track = MUSIC_TRACKS.find(t => t.id === trackId);
+            if (!track) return;
+
+            const player = document.getElementById('bgMusicPlayer');
+            player.src = track.url;
+            player.play().catch(e => console.log("Autoplay blocked or stream error:", e));
+
+            state.activeMusic = trackId;
+            if (save) saveState();
+            renderShop();
+        }
+
+        function toggleIntervalExpand(index) {
+            state.expandedIntervalIndex = state.expandedIntervalIndex === index ? null : index;
+            renderInfoModal();
+        }
+
+        function renderInfoModal() {
+            const container = document.getElementById('infoIntervalList');
+            if (!container) return;
+            container.innerHTML = "";
+            
+            MAIN_INTERVAL_INFO.forEach((item, idx) => {
+                const isExpanded = state.expandedIntervalIndex === idx;
+                
+                let variantsHtml = "";
+                if (isExpanded) {
+                    const variantsContent = item.variants.map(v => `
+                        <div class="flex justify-between items-center text-xs py-1 px-2.5 bg-[#171717] rounded-lg">
+                            <span class="text-gray-300 font-medium">${v.label}</span>
+                            <span class="${v.colorClass} px-2 py-0.5 rounded border font-semibold">${v.htsText}</span>
+                        </div>
+                    `).join("");
+
+                    variantsHtml = `
+                        <div class="mt-2.5 pt-2.5 border-t border-[#333] space-y-1.5 pl-2">
+                            <div class="text-[11px] font-bold text-gray-400 mb-1">Abweichende Varianten:</div>
+                            ${variantsContent}
+                        </div>
+                    `;
+                }
+
+                container.innerHTML += `
+                    <div class="bg-[#222] p-3 rounded-xl border border-[#333] cursor-pointer transition hover:border-blue-500/50" onclick="toggleIntervalExpand(${idx})">
+                        <div class="flex justify-between items-center">
+                            <span class="font-semibold text-white text-sm flex items-center">
+                                <i class="fas fa-chevron-${isExpanded ? 'down' : 'right'} text-blue-400 text-xs mr-2.5 transition-transform"></i>
+                                ${item.name}
+                            </span>
+                            <span class="bg-[#2a2a2a] text-gray-300 px-2.5 py-1 rounded-md text-xs font-medium border border-[#3a3a3a]">${item.htsLabel}</span>
+                        </div>
+                        ${variantsHtml}
+                    </div>
+                `;
+            });
+        }
+    </script>
+</body>
+</html>
