@@ -1,5 +1,3 @@
-v1.0-preview
-
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -10,6 +8,14 @@ v1.0-preview
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     
+    <!-- Firebase SDK (v10 Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    
+    <!-- other libs -->
+    <script src="https://cdn.jsdelivr.net/npm/tonal/browser/tonal.min.js"></script>
+
     <style>
         :root {
             --bg-color: #121212;
@@ -168,8 +174,12 @@ v1.0-preview
 
   <main class="flex min-h-screen items-center justify-center p-4">
 
+    <div class="fixed top-2 left-2 z-40 text-xs text-gray-500 font-medium">
+    v26.0 
+    </div>
+
     <div class="fixed bottom-4 left-4 z-40 text-xs text-gray-500 font-medium">
-    Created by Tewe This project was created for the Waldorf School Rostock 2026
+    Created by Tewe This project was created for the Waldorf School Rostock
     </div>
 
     <audio id="bgMusicPlayer" loop class="hidden"></audio>
@@ -308,25 +318,33 @@ v1.0-preview
         </div>
     </div>
 
-    <div id="cheatModal" class="hidden fixed inset-0 modal-bg z-50 flex items-center justify-center p-4">
-        <div class="app-card w-full max-w-sm rounded-2xl p-6 relative text-center space-y-4">
-            <div class="flex justify-between items-center mb-2">
-                <h3 class="font-bold text-lg text-white"><i class="fas fa-user-ninja mr-2"></i> Developer Menu</h3>
-                <button onclick="closeModal('cheatModal')" class="text-gray-400 hover:text-white text-xl">&times;</button>
-            </div>
-            <div class="space-y-3 pt-2">
-                <button onclick="addCheatCoins(1000)" class="w-full py-3 bg-gray-600/80 hover:bg-gray-500 text-white font-normal rounded-xl flex items-center justify-center space-x-2 transition-colors">
-                    <span>+1000 Coins hinzufügen</span>
-                </button>
-                <button onclick="resetAllProgress()" class="w-full py-3 bg-red-600/80 hover:bg-red-500 text-white font-normal rounded-xl flex items-center justify-center space-x-2 transition-colors">
-                    <span>Fortschritt zurücksetzen</span>
-                </button>
-            </div>
-        </div>
-    </div>
-
     <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCeFrcDRedUgY46Q2k2LArVVh8Hx7m2NbA",
+            authDomain: "itervalle.firebaseapp.com",
+            projectId: "itervalle",
+            storageBucket: "itervalle.firebasestorage.app",
+            messagingSenderId: "792584401162",
+            appId: "1:792584401162:web:c9e5ce57c4e2720bf00af3"
+        };
+
+        try {
+            firebase.initializeApp(firebaseConfig);
+        } catch (e) {
+            console.warn("Firebase Init Hinweis:", e);
+        }
+
+        const db = typeof firebase !== 'undefined' && firebase.firestore ? firebase.firestore() : null;
+        const auth = typeof firebase !== 'undefined' && firebase.auth ? firebase.auth() : null;
+        let currentUser = null;
+
         const CORRECT_SOUND_URL = "https://cdn.pixabay.com/audio/2026/01/10/audio_8675b56de9.mp3";
+
+        const NOTE_SOUND_URLS = {
+            "C": "", "C#": "", "Db": "", "D": "", "D#": "", "Eb": "", "E": "", 
+            "F": "", "F#": "", "Gb": "", "G": "", "G#": "", "Ab": "", "A": "", 
+            "A#": "", "Hb": "", "H": ""
+        };
 
         const MAIN_INTERVAL_INFO = [
             {
@@ -454,212 +472,140 @@ v1.0-preview
             { id: 'error-hollow-knight', name: 'error sound not found', price: 0, url: 'https://error.mp3' }
         ];
 
-        // ==========================================
-        // HIER KANNST DU UNENDLICH VIELE AUFGABEN HINZUFÜGEN!
-        // ==========================================
-        const INTERVAL_TASK_POOL = [
-            // --- Prim C ---
-            {
-                intervalName: "r1", hts: 0,
-                n1: { name: "C", midi: 60, step: -2, acc: null },
-                n2: { name: "C", midi: 60, step: 2, acc: null },
-                validAnswers: ["r1"]
-            },
-            {
-                intervalName: "r1", hts: 0,
-                n1: { name: "C#", midi: 61, step: -2, acc: "sharp" },
-                n2: { name: "C#", midi: 61, step: -2, acc: "sharp" },
-                validAnswers: ["r1"]
-            },
+        // Wörterbuch mit Oktavangaben für exakte Höhenbestimmung auf den Notenlinien
+        const NOTE_DICTIONARY = {
+            "C":   { name: "C",  midi: 60, step: -2, acc: null, oct: 4 },
+            "C#":  { name: "C#", midi: 61, step: -2, acc: "sharp", oct: 4 },
+            "Cis": { name: "C#", midi: 61, step: -2, acc: "sharp", oct: 4 },
+            "Db":  { name: "Db", midi: 61, step: -1, acc: "flat", oct: 4 },
+            "Des": { name: "Db", midi: 61, step: -1, acc: "flat", oct: 4 },
+            "D":   { name: "D",  midi: 62, step: -1, acc: null, oct: 4 },
+            "D#":  { name: "D#", midi: 63, step: -1, acc: "sharp", oct: 4 },
+            "Dis": { name: "D#", midi: 63, step: -1, acc: "sharp", oct: 4 },
+            "Eb":  { name: "Eb", midi: 63, step: 0,  acc: "flat", oct: 4 },
+            "Es":  { name: "Eb", midi: 63, step: 0,  acc: "flat", oct: 4 },
+            "E":   { name: "E",  midi: 64, step: 0,  acc: null, oct: 4 },
+            "E#":  { name: "E#", midi: 65, step: 0,  acc: "sharp", oct: 4 },
+            "Eis": { name: "E#", midi: 65, step: 0,  acc: "sharp", oct: 4 },
+            "F":   { name: "F",  midi: 65, step: 1,  acc: null, oct: 4 },
+            "F#":  { name: "F#", midi: 66, step: 1,  acc: "sharp", oct: 4 },
+            "Fis": { name: "F#", midi: 66, step: 1,  acc: "sharp", oct: 4 },
+            "Gb":  { name: "Gb", midi: 66, step: 2,  acc: "flat", oct: 4 },
+            "Ges": { name: "Gb", midi: 66, step: 2,  acc: "flat", oct: 4 },
+            "G":   { name: "G",  midi: 67, step: 2,  acc: null, oct: 4 },
+            "G#":  { name: "G#", midi: 68, step: 2,  acc: "sharp", oct: 4 },
+            "Gis": { name: "G#", midi: 68, step: 2,  acc: "sharp", oct: 4 },
+            "Ab":  { name: "Ab", midi: 68, step: 3,  acc: "flat", oct: 4 },
+            "As":  { name: "Ab", midi: 68, step: 3,  acc: "flat", oct: 4 },
+            "A":   { name: "A",  midi: 69, step: 3,  acc: null, oct: 4 },
+            "A#":  { name: "A#", midi: 70, step: 3,  acc: "sharp", oct: 4 },
+            "Ais": { name: "A#", midi: 70, step: 3,  acc: "sharp", oct: 4 },
+            "Hb":  { name: "Hb", midi: 70, step: 4,  acc: "flat", oct: 4 },
+            "B":   { name: "Hb", midi: 70, step: 4,  acc: "flat", oct: 4 },
+            "H":   { name: "H",  midi: 71, step: 4,  acc: null, oct: 4 },
+            "H#":  { name: "H#", midi: 72, step: 4,  acc: "sharp", oct: 4 },
+            "His": { name: "H#", midi: 72, step: 4,  acc: "sharp", oct: 4 },
+            "C5":  { name: "C5", midi: 72, step: 5,  acc: null, oct: 5 },
+            "C#5": { name: "C#5", midi: 73, step: 5, acc: "sharp", oct: 5 },
+            "Db5": { name: "Db5", midi: 73, step: 6, acc: "flat", oct: 5 },
+            "D5":  { name: "D5", midi: 74, step: 6,  acc: null, oct: 5 },
+            "D#5": { name: "D#5", midi: 75, step: 6, acc: "sharp", oct: 5 },
+            "Eb5": { name: "Eb5", midi: 75, step: 7, acc: "flat", oct: 5 },
+            "E5":  { name: "E5", midi: 76, step: 7,  acc: null, oct: 5 },
+            "F5":  { name: "F5", midi: 77, step: 8,  acc: null, oct: 5 },
+            "F#5": { name: "F#5", midi: 78, step: 8, acc: "sharp", oct: 5 },
+            "Gb5": { name: "Gb5", midi: 78, step: 9, acc: "flat", oct: 5 },
+            "G5":  { name: "G5", midi: 79, step: 9,  acc: null, oct: 5 }
+        };
 
-            // -- Prim D --
+        const QUALITY_MAP = {
+            "P": "r", // Perfect -> rein
+            "m": "k", // minor -> klein
+            "M": "g", // Major -> groß
+            "A": "ü", // Augmented -> übermäßig
+            "d": "v"  // diminished -> vermindert
+        };
 
-            {
-                intervalName: "r1", hts: 0,
-                n1: { name: "Db", midi: 61, step: -1, acc: "flat" },
-                n2: { name: "Db", midi: 61, step: -1, acc: "flat" },
-                validAnswers: ["r1"]
-            },
-            {
-                intervalName: "r1", hts: 0,
-                n1: { name: "D", midi: 62, step: -1, acc: null },
-                n2: { name: "D", midi: 62, step: -1, acc: null },
-                validAnswers: ["r1"]
-            },
-            {
-                intervalName: "r1", hts: 0,
-                n1: { name: "D#", midi: 63, step: -1, acc: "sharp" },
-                n2: { name: "D#", midi: 63, step: -1, acc: "sharp" },
-                validAnswers: ["r1"]
-            },
+        function toGermanInterval(tonalInterval) {
+            const details = Tonal.Interval.get(tonalInterval);
+            if (details.empty) return "Unbekannt";
 
-            // -- Prim E --
+            // Doppelübermäßig (AA / aa) und Doppelvermindert (dd) streng ausschließen
+            if (details.q === "AA" || details.q === "dd" || details.q.length > 1) {
+                return "Unbekannt";
+            }
 
-            {
-                intervalName: "r1", hts: 0,
-                n1: { name: "Eb", midi: 63, step: 0, acc: "flat" },
-                n2: { name: "Eb", midi: 63, step: 0, acc: "flat" },
-                validAnswers: ["r1"]
-            },
-            {
-                intervalName: "r1", hts: 0,
-                n1: { name: "E", midi: 64, step: 0, acc: null },
-                n2: { name: "E", midi: 64, step: 0, acc: null },
-                validAnswers: ["r1"]
-            },
+            const germanQuality = QUALITY_MAP[details.q];
+            if (!germanQuality) return "Unbekannt";
 
-            // -- Prim F --
+            const step = details.num;
+            // Bereich strictly auf r1 bis ü8 festlegen (Stufe 1 bis 8, max 13 Halbtöne)
+            if (step < 1 || step > 8) return "Unbekannt";
+            if (details.semitones < 0 || details.semitones > 13) return "Unbekannt";
 
-            {
-                intervalName: "r1", hts: 0,
-                n1: { name: "F", midi: 65, step: 1, acc: null },
-                n2: { name: "F", midi: 65, step: 1, acc: null },
-                validAnswers: ["r1"]
-            },
-            {
-                intervalName: "r1", hts: 0,
-                n1: { name: "F#", midi: 66, step: 1, acc: "sharp" },
-                n2: { name: "F#", midi: 66, step: 1, acc: "sharp" },
-                validAnswers: ["r1"]
-            },
+            return `${germanQuality}${step}`;
+        }
 
-            // -- Prim G --
+        function parseTask(item) {
+            const parseNote = (str) => {
+                if (!str) return null;
+                const clean = str.trim();
+                const foundKey = Object.keys(NOTE_DICTIONARY).find(k => k.toLowerCase() === clean.toLowerCase());
+                return foundKey ? { ...NOTE_DICTIONARY[foundKey] } : null;
+            };
 
-            {
-                intervalName: "r1", hts: 0,
-                n1: { name: "Gb", midi: 66, step: 2, acc: "sharp" },
-                n2: { name: "Gb", midi: 66, step: 2, acc: "sharp" },
-                validAnswers: ["r1"]
-            },
-            {
-                intervalName: "r1", hts: 0,
-                n1: { name: "G", midi: 67, step: 2, acc: null },
-                n2: { name: "G", midi: 67, step: 2, acc: null },
-                validAnswers: ["r1"]
-            },
-            {
-                intervalName: "r1", hts: 0,
-                n1: { name: "G#", midi: 68, step: 2, acc: "flat" },
-                n2: { name: "G#", midi: 68, step: 2, acc: "flat" },
-                validAnswers: ["r1"]
-            },
+            const n1 = parseNote(item.note1);
+            const n2 = parseNote(item.note2);
 
-            // -- Prim A --
+            if (!n1 || !n2) return null;
 
-            {
-                intervalName: "r1", hts: 0,
-                n1: { name: "Ab", midi: 68, step: 3, acc: "flat" },
-                n2: { name: "Ab", midi: 68, step: 3, acc: "flat" },
-                validAnswers: ["r1"]
-            },
-            {
-                intervalName: "r1", hts: 0,
-                n1: { name: "A", midi: 69, step: 3, acc: null },
-                n2: { name: "A", midi: 69, step: 3, acc: null },
-                validAnswers: ["r1"]
-            },
-            {
-                intervalName: "r1", hts: 0,
-                n1: { name: "A#", midi: 70, step: 3, acc: "sharp" },
-                n2: { name: "A#", midi: 70, step: 3, acc: "sharp" },
-                validAnswers: ["r1"]
-            },
+            // Die 2. Note darf NIEMALS tiefer als die 1. Note liegen (weder optisch noch akustisch)
+            if (n2.midi < n1.midi || n2.step < n1.step) {
+                return null;
+            }
 
-            // -- Prim H --
+            const note1WithOct = n1.name + n1.oct;
+            const note2WithOct = n2.name + n2.oct;
 
-            {
-                intervalName: "r1", hts: 0,
-                n1: { name: "Hb", midi: 70, step: 4, acc: "flat" },
-                n2: { name: "Hb", midi: 70, step: 4, acc: "flat" },
-                validAnswers: ["r1"]
-            },
-            {
-                intervalName: "r1", hts: 0,
-                n1: { name: "H", midi: 71, step: 4, acc: null },
-                n2: { name: "H", midi: 71, step: 4, acc: null },
-                validAnswers: ["r1"]
-            },
-            // --- Übermäßige Primen ---
-           {
-                intervalName: "ü1", hts: 1,
-                n1: { name: "C", midi: 60, step: -2, acc: null },
-                n2: { name: "C#", midi: 61, step: -2, acc: "sharp" },
-                validAnswers: ["ü1"]
-            },
-            {
-                intervalName: "ü1", hts: 1,
-                n1: { name: "D", midi: 62, step: -1, acc: null },
-                n2: { name: "D#", midi: 63, step: -1, acc: "sharp" },
-                validAnswers: ["ü1"]
-            },
-            {
-                intervalName: "ü1", hts: 1,
-                n1: { name: "E", midi: 64, step: 0, acc: null },
-                n2: { name: "E#", midi: 65, step: 0, acc: "sharp" },
-                validAnswers: ["ü1"]
-            },
-            {
-                intervalName: "ü1", hts: 1,
-                n1: { name: "F", midi: 65, step: 1, acc: null },
-                n2: { name: "F#", midi: 66, step: 1, acc: "sharp" },
-                validAnswers: ["ü1"]
-            },
-            {
-                intervalName: "ü1", hts: 1,
-                n1: { name: "G", midi: 67, step: 2, acc: null },
-                n2: { name: "G#", midi: 68, step: 2, acc: "sharp" },
-                validAnswers: ["ü1"]
-            },
-            {
-                intervalName: "ü1", hts: 1,
-                n1: { name: "A", midi: 69, step: 3, acc: null },
-                n2: { name: "A#", midi: 70, step: 3, acc: "sharp" },
-                validAnswers: ["ü1"]
-            },
-            {
-                intervalName: "ü1", hts: 1,
-                n1: { name: "H", midi: 71, step: 4, acc: null },
-                n2: { name: "H#", midi: 72, step: 4, acc: "sharp" },
-                validAnswers: ["ü1"]
-            },
-            {
-                intervalName: "r5", hts: 7,
-                n1: { name: "D", midi: 62, step: -1, acc: null },
-                n2: { name: "A", midi: 69, step: 3, acc: null },
-                validAnswers: ["r5"]
-            },
-            {
-                intervalName: "k2", hts: 1,
-                n1: { name: "D", midi: 62, step: -1, acc: null },
-                n2: { name: "Eb", midi: 63, step: 0, acc: "flat" },
-                validAnswers: ["k2"]
-            },
-            {
-                intervalName: "g2", hts: 2,
-                n1: { name: "Ab", midi: 68, step: 3, acc: "flat" },
-                n2: { name: "Hb", midi: 70, step: 4, acc: "flat" },
-                validAnswers: ["g2"]
-            },
-            {
-                intervalName: "k3", hts: 3,
-                n1: { name: "F#", midi: 66, step: 1, acc: "sharp" },
-                n2: { name: "Ab", midi: 68, step: 3, acc: "flat" },
-                validAnswers: ["k3"]
-            },
+            const tonalDist = Tonal.Interval.distance(note1WithOct, note2WithOct);
+            const intervalName = toGermanInterval(tonalDist);
+
+            if (intervalName === "Unbekannt") return null;
+
+            return {
+                intervalName: intervalName,
+                n1: n1,
+                n2: n2,
+                sound1: item.sound1 || item.url1 || null,
+                sound2: item.sound2 || item.url2 || null,
+                validAnswers: item.validAnswers || [intervalName]
+            };
+        }
+
+        const LOWER_NOTES = [ "C", "C#", "Db", "D", "D#", "Eb", "E", "F", "F#", "Gb", "G", "G#", "Ab", "A", "A#", "Hb", "H" ];
+        const ALL_NOTES = [ 
+            "C", "C#", "Db", "D", "D#", "Eb", "E", "F", "F#", "Gb", "G", "G#", "Ab", "A", "A#", "Hb", "H",
+            "C5", "C#5", "Db5", "D5", "D#5", "Eb5", "E5", "F5", "F#5", "Gb5", "G5"
         ];
-        // ==========================================
+
+        const RAW_INTERVAL_TASK_POOL = LOWER_NOTES.flatMap(n1 => ALL_NOTES.map(n2 => ({ note1: n1, note2: n2 })));
+        
+        // Filtert ungültige Aufgaben, tiefer liegende 2. Noten sowie "aa" und "dd" heraus
+        const INTERVAL_TASK_POOL = RAW_INTERVAL_TASK_POOL
+            .map(parseTask)
+            .filter(task => task !== null);
 
         let state = {
-            coins: parseInt(localStorage.getItem('coins')) || 0,
-            streak: parseInt(localStorage.getItem('streak')) || 0,
-            lastStreakDate: localStorage.getItem('lastStreakDate') || '',
-            totalRounds: parseInt(localStorage.getItem('totalRounds')) || 0,
-            unlockedThemes: JSON.parse(localStorage.getItem('unlockedThemes')) || ['default'],
-            activeTheme: localStorage.getItem('activeTheme') || 'default',
-            unlockedUpgrades: JSON.parse(localStorage.getItem('unlockedUpgrades')) || [],
-            unlockedMusic: JSON.parse(localStorage.getItem('unlockedMusic')) || [],
-            activeMusic: localStorage.getItem('activeMusic') || '',
-            boostUntil: parseInt(localStorage.getItem('boostUntil')) || 0,
+            coins: 0,
+            streak: 0,
+            lastStreakDate: '',
+            totalRounds: 0,
+            unlockedThemes: ['default'],
+            activeTheme: 'default',
+            unlockedUpgrades: [],
+            unlockedMusic: [],
+            activeMusic: '',
+            boostUntil: 0,
             notesHidden: false,
             
             bossProgress: 0,
@@ -672,21 +618,26 @@ v1.0-preview
         let boostInterval = null;
 
         window.onload = function () {
+            state.coins = parseInt(localStorage.getItem('coins')) || 0;
+            state.streak = parseInt(localStorage.getItem('streak')) || 0;
+            state.lastStreakDate = localStorage.getItem('lastStreakDate') || '';
+            state.totalRounds = parseInt(localStorage.getItem('totalRounds')) || 0;
+            state.bossProgress = parseInt(localStorage.getItem('bossProgress')) || 0;
+            state.activeTheme = localStorage.getItem('activeTheme') || 'default';
+            state.unlockedThemes = JSON.parse(localStorage.getItem('unlockedThemes') || '["default"]');
+            state.unlockedUpgrades = JSON.parse(localStorage.getItem('unlockedUpgrades') || '[]');
+            state.unlockedMusic = JSON.parse(localStorage.getItem('unlockedMusic') || '[]');
+            state.activeMusic = localStorage.getItem('activeMusic') || '';
+            state.boostUntil = parseInt(localStorage.getItem('boostUntil')) || 0;
+
             applyTheme(state.activeTheme);
             checkDailyStreak();
             initBossbar();
             generateTask();
             renderInfoModal();
             updateUI();
-            
-            if (state.activeMusic) {
-                const track = MUSIC_TRACKS.find(t => t.id === state.activeMusic);
-                if (track) playMusicTrack(track.id, false);
-            }
 
-            if (state.boostUntil > Date.now()) {
-                startBoostTimerUI();
-            }
+            initFirebaseAndSync();
 
             document.getElementById('intervalInput').addEventListener('keydown', function(e) {
                 if (e.key === 'Enter') {
@@ -695,17 +646,89 @@ v1.0-preview
             });
         };
 
-        function saveState() {
+        function initFirebaseAndSync() {
+            if (!auth) return;
+
+            auth.signInAnonymously().catch(err => console.warn("Firebase Auth Hinweis:", err));
+
+            auth.onAuthStateChanged(async (user) => {
+                if (user) {
+                    currentUser = user;
+                    if (!db) return;
+                    try {
+                        const userRef = db.collection('users').doc(user.uid);
+                        const doc = await userRef.get();
+
+                        if (doc.exists) {
+                            const data = doc.data();
+                            state.coins = data.coins ?? 0;
+                            state.streak = data.streak ?? 0;
+                            state.lastStreakDate = data.lastStreakDate ?? '';
+                            state.totalRounds = data.totalRounds ?? 0;
+                            state.bossProgress = data.bossProgress ?? 0;
+                            state.unlockedThemes = data.unlockedThemes ?? ['default'];
+                            state.activeTheme = data.activeTheme ?? 'default';
+                            state.unlockedUpgrades = data.unlockedUpgrades ?? [];
+                            state.unlockedMusic = data.unlockedMusic ?? [];
+                            state.activeMusic = data.activeMusic ?? '';
+                            state.boostUntil = data.boostUntil ?? 0;
+                        } else {
+                            await saveState();
+                        }
+
+                        applyTheme(state.activeTheme);
+                        checkDailyStreak();
+                        renderBossbar();
+                        updateUI();
+
+                        if (state.activeMusic) {
+                            const track = MUSIC_TRACKS.find(t => t.id === state.activeMusic);
+                            if (track) playMusicTrack(track.id, false);
+                        }
+
+                        if (state.boostUntil > Date.now()) {
+                            startBoostTimerUI();
+                        }
+                    } catch (e) {
+                        console.warn("Firestore Sync Hinweis:", e);
+                    }
+                }
+            });
+        }
+
+        async function saveState() {
             localStorage.setItem('coins', state.coins);
             localStorage.setItem('streak', state.streak);
             localStorage.setItem('lastStreakDate', state.lastStreakDate);
             localStorage.setItem('totalRounds', state.totalRounds);
+            localStorage.setItem('bossProgress', state.bossProgress);
             localStorage.setItem('unlockedThemes', JSON.stringify(state.unlockedThemes));
             localStorage.setItem('activeTheme', state.activeTheme);
             localStorage.setItem('unlockedUpgrades', JSON.stringify(state.unlockedUpgrades));
             localStorage.setItem('unlockedMusic', JSON.stringify(state.unlockedMusic));
             localStorage.setItem('activeMusic', state.activeMusic);
             localStorage.setItem('boostUntil', state.boostUntil);
+
+            if (currentUser && db) {
+                try {
+                await db.collection('users').doc(currentUser.uid).set({
+                    coins: state.coins ?? 0,
+                    streak: state.streak ?? 0,
+                    lastStreakDate: state.lastStreakDate || '',
+                    totalRounds: state.totalRounds ?? 0,
+                    bossProgress: state.bossProgress ?? 0,
+                    unlockedThemes: state.unlockedThemes || ['default'],
+                    activeTheme: state.activeTheme || 'default',
+                    unlockedUpgrades: state.unlockedUpgrades || [],
+                    unlockedMusic: state.unlockedMusic || [],
+                    activeMusic: state.activeMusic || '',
+                    boostUntil: state.boostUntil ?? 0,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+                } catch (e) {
+                    console.error("Fehler beim Speichern in Firestore:", e);
+                }
+            }
         }
 
         function checkDailyStreak() {
@@ -744,7 +767,7 @@ v1.0-preview
             if (state.isWaiting) return;
             
             if (state.unlockedUpgrades.includes('auto_solver') && Math.random() < 0.10) {
-                state.currentTask = INTERVAL_TASK_POOL.find(t => t.hts === 7) || INTERVAL_TASK_POOL[0];
+                state.currentTask = INTERVAL_TASK_POOL[0];
                 renderStaff();
                 document.getElementById('feedbackMsg').className = "text-center font-bold text-amber-400 text-sm min-h-[24px] w-full";
                 document.getElementById('feedbackMsg').innerText = "Glücks-Autolöser! aktiviert";
@@ -752,8 +775,16 @@ v1.0-preview
                 return;
             }
 
-            const randIdx = Math.floor(Math.random() * INTERVAL_TASK_POOL.length);
-            state.currentTask = INTERVAL_TASK_POOL[randIdx];
+            let selectedTask;
+            let attempts = 0;
+
+            do {
+                const randIdx = Math.floor(Math.random() * INTERVAL_TASK_POOL.length);
+                selectedTask = INTERVAL_TASK_POOL[randIdx];
+                attempts++;
+            } while ((!selectedTask || selectedTask.intervalName === "Unbekannt") && attempts < 100);
+
+            state.currentTask = selectedTask;
 
             document.getElementById('intervalInput').value = "";
             document.getElementById('note1Input').value = "";
@@ -839,7 +870,6 @@ v1.0-preview
                 ledger.setAttribute("stroke-width", "2");
                 svg.appendChild(ledger);
             }
-
         }
 
         function toggleNotesVisibility() {
@@ -849,12 +879,29 @@ v1.0-preview
             renderStaff();
         }
 
+        function playNoteSound(noteObj, customUrl) {
+            const url = customUrl || (noteObj && NOTE_SOUND_URLS[noteObj.name]);
+            if (url && url.trim() !== "") {
+                const audio = new Audio(url);
+                audio.volume = 0.6;
+                audio.play().catch(e => {
+                    console.warn("Audio URL konnte nicht abgespielt werden, nutze Synth-Fallback:", e);
+                    if (noteObj && noteObj.midi) {
+                        const volume = state.notesHidden ? 0.5 : 0.15;
+                        playTone(midiToFreq(noteObj.midi), 'sine', 0.4, volume);
+                    }
+                });
+            } else if (noteObj && noteObj.midi) {
+                const volume = state.notesHidden ? 0.5 : 0.15;
+                playTone(midiToFreq(noteObj.midi), 'sine', 0.4, volume);
+            }
+        }
+
         function playIntervalSound() {
             if (state.currentTask) {
-                const volume = state.notesHidden ? 0.5 : 0.15;
-                playTone(midiToFreq(state.currentTask.n1.midi), 'sine', 0.4, volume);
+                playNoteSound(state.currentTask.n1, state.currentTask.sound1 || state.currentTask.url1);
                 setTimeout(() => {
-                    playTone(midiToFreq(state.currentTask.n2.midi), 'sine', 0.4, volume);
+                    playNoteSound(state.currentTask.n2, state.currentTask.sound2 || state.currentTask.url2);
                 }, 400);
             }
         }
@@ -925,17 +972,10 @@ v1.0-preview
             const rawInput = document.getElementById('intervalInput').value.trim();
             const feedbackEl = document.getElementById('feedbackMsg');
 
-            if (rawInput === "524262") {
-                openModal('cheatModal');
-                document.getElementById('intervalInput').value = "";
-                return;
-            }
-
             const userN1 = document.getElementById('note1Input').value.trim();
             const userN2 = document.getElementById('note2Input').value.trim();
-            const userHts = document.getElementById('htsInput').value.trim();
 
-            if (rawInput === "" && userN1 === "" && userN2 === "" && userHts === "") {
+            if (rawInput === "" && userN1 === "" && userN2 === "") {
                 feedbackEl.className = "text-center font-bold text-red-500 text-sm min-h-[24px] w-full";
                 feedbackEl.innerText = "Bitte gib eine Antwort ein! ✗";
                 playTone(150, 'sawtooth', 0.3);
@@ -955,10 +995,6 @@ v1.0-preview
 
             if (userN1 && !matchNoteString(userN1, state.currentTask.n1)) isCorrect = false;
             if (userN2 && !matchNoteString(userN2, state.currentTask.n2)) isCorrect = false;
-            if (userHts) {
-                const parsedHts = parseInt(userHts.replace(/\D/g, ''));
-                if (isNaN(parsedHts) || parsedHts !== state.currentTask.hts) isCorrect = false;
-            }
 
             if (isCorrect) {
                 handleCorrectAnswer();
@@ -1003,11 +1039,13 @@ v1.0-preview
                 state.isWaiting = true;
                 setTimeout(() => {
                     state.bossProgress = 0;
+                    saveState();
                     renderBossbar();
                     state.isWaiting = false;
                     generateTask();
                 }, 2000);
             } else {
+                saveState();
                 state.isWaiting = true;
                 setTimeout(() => {
                     state.isWaiting = false;
@@ -1154,29 +1192,6 @@ v1.0-preview
             if (streakEl) streakEl.innerText = state.streak;
             const roundsEl = document.getElementById('roundsDisplay');
             if (roundsEl) roundsEl.innerText = state.totalRounds;
-        }
-
-        function addCheatCoins(amount) {
-            state.coins += amount;
-            saveState();
-            updateUI();
-        }
-
-        function resetAllProgress() {
-            state.coins = 0;
-            state.streak = 0;
-            state.totalRounds = 0;
-            state.unlockedThemes = ['default'];
-            state.activeTheme = 'default';
-            state.unlockedUpgrades = [];
-            state.unlockedMusic = [];
-            state.activeMusic = '';
-            state.boostUntil = 0;
-            saveState();
-            applyTheme('default');
-            updateUI();
-            closeModal('cheatModal');
-            location.reload();
         }
 
         function stopMusic() {
